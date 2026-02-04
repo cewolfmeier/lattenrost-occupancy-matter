@@ -1,17 +1,35 @@
 #include <Matter.h>
 #include <MatterOccupancy.h>
+#include <Wire.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
 
+Adafruit_MPU6050 mpu_1;
 MatterOccupancy matter_occupancy_sensor;
+
+float Ax;
+float Ay;
+float Az;
+float pitch;
 
 void setup()
 {
   Serial.begin(115200);
+  Wire.begin();
   Matter.begin();
   matter_occupancy_sensor.begin();
 
   pinMode(BTN_BUILTIN, INPUT_PULLUP);
   pinMode(LEDR, OUTPUT);
   digitalWrite(LEDR, HIGH);
+
+  if (!mpu_1.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
+  }
+  Serial.println("MPU6050 Found!");
 
   Serial.println("Matter occupancy sensor");
 
@@ -44,6 +62,8 @@ void setup()
 void loop()
 {
   decommission_handler();  // if the user button is pressed for 10 seconds
+
+  
   static uint32_t last_action = 0;
   // Wait 10 seconds
   if ((last_action + 10000) < millis()) {
@@ -53,6 +73,7 @@ void loop()
     // Publish the occupancy value - you can also use 'matter_occupancy_sensor.set_occupancy(new_state)'
     matter_occupancy_sensor = new_state;
     Serial.printf("Current ouccupancy state: %s\n", new_state ? "occupied" : "unoccupied");
+    get_pitch();
   }
 }
 
@@ -85,4 +106,15 @@ void decommission_handler() {
       }
     }
   }
+}
+
+void get_pitch() {
+  sensors_event_t a, g, temp;
+  mpu_1.getEvent(&a, &g, &temp);
+  Ax=a.acceleration.x/9.81;
+  Ay=a.acceleration.y/9.81;
+  Az=a.acceleration.z/9.81;
+  pitch = atan2(Ay,sqrt(Az*Az+Ax*Ax))*360/(2*3.14);
+  Serial.print("Pitch:");
+  Serial.println(pitch);
 }
