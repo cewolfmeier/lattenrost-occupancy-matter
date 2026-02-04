@@ -4,8 +4,11 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 
+
 Adafruit_MPU6050 mpu_1;
+Adafruit_MPU6050 mpu_2;
 MatterOccupancy matter_occupancy_sensor;
+
 
 float Ax;
 float Ay;
@@ -16,6 +19,7 @@ void setup()
 {
   Serial.begin(115200);
   Wire.begin();
+  Wire1.begin();
   Matter.begin();
   matter_occupancy_sensor.begin();
 
@@ -24,6 +28,14 @@ void setup()
   digitalWrite(LEDR, HIGH);
 
   if (!mpu_1.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
+  }
+  Serial.println("MPU6050 Found!");
+
+  if (!mpu_2.begin(104, &Wire1)) {
     Serial.println("Failed to find MPU6050 chip");
     while (1) {
       delay(10);
