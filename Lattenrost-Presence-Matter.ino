@@ -4,44 +4,48 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 
+Adafruit_MPU6050 lattenrost_1;
+Adafruit_MPU6050 lattenrost_2;
 
-Adafruit_MPU6050 mpu_1;
-Adafruit_MPU6050 mpu_2;
-MatterOccupancy matter_occupancy_sensor;
-
-
-float Ax;
-float Ay;
-float Az;
-float pitch;
+MatterOccupancy matter_occupancy_sensor_1;
+MatterOccupancy matter_occupancy_sensor_2;
 
 void setup()
 {
+  // ---- serial setup---- 
   Serial.begin(115200);
-  Wire.begin();
-  Wire1.begin();
-  Matter.begin();
-  matter_occupancy_sensor.begin();
 
+  // ---- onboard component setup---- 
   pinMode(BTN_BUILTIN, INPUT_PULLUP);
   pinMode(LEDR, OUTPUT);
   digitalWrite(LEDR, HIGH);
-
-  if (!mpu_1.begin()) {
+  
+  // ---- first I2C interface and sensor setup---- 
+  Wire.begin();
+  if (!lattenrost_1.begin()) {
     Serial.println("Failed to find MPU6050 chip");
     while (1) {
       delay(10);
     }
   }
-  Serial.println("MPU6050 Found!");
+  Serial.println("First MPU6050 Found!");
 
-  if (!mpu_2.begin(104, &Wire1)) {
+  // ---- second I2C interface and sensor setup---- 
+  
+  Wire1.begin();
+  if (!lattenrost_2.begin(104, &Wire1)) {
     Serial.println("Failed to find MPU6050 chip");
     while (1) {
       delay(10);
     }
   }
-  Serial.println("MPU6050 Found!");
+  Serial.println("Second MPU6050 Found!");
+
+  // ---- Matter setup---- 
+  
+  Matter.begin();
+  matter_occupancy_sensor_1.begin();
+  matter_occupancy_sensor_2.begin();
 
   Serial.println("Matter occupancy sensor");
 
@@ -53,7 +57,7 @@ void setup()
   }
   while (!Matter.isDeviceCommissioned()) {
     delay(200);
-    decommission_handler();  // if the user button is pressed for 10 seconds
+    decommission_handler();
   }
 
   Serial.println("Waiting for Thread network...");
@@ -64,7 +68,7 @@ void setup()
   Serial.println("Connected to Thread network");
 
   Serial.println("Waiting for Matter device discovery...");
-  while (!matter_occupancy_sensor.is_online()) {
+  while (!matter_occupancy_sensor_1.is_online() && !matter_occupancy_sensor_2.is_online()) {
     delay(200);
   }
 
@@ -73,60 +77,23 @@ void setup()
 
 void loop()
 {
-  decommission_handler();  // if the user button is pressed for 10 seconds
-
-  
+  decommission_handler();
   static uint32_t last_action = 0;
-  // Wait 10 seconds
-  if ((last_action + 10000) < millis()) {
+  // Wait 1 second
+  if ((last_action + 1000) < millis()) {
     last_action = millis();
-    // Toggle the state of the occupancy sensor
-    bool new_state = !matter_occupancy_sensor.get_occupancy();
-    // Publish the occupancy value - you can also use 'matter_occupancy_sensor.set_occupancy(new_state)'
-    matter_occupancy_sensor = new_state;
-    Serial.printf("Current ouccupancy state: %s\n", new_state ? "occupied" : "unoccupied");
-    get_pitch();
+
+    sensors_event_t a, g, temp;
+
+    lattenrost_1.getEvent(&a, &g, &temp);
+    bool occ_1 = is_occupied(a, 1.0);
+
+    lattenrost_2.getEvent(&a, &g, &temp);
+    bool occ_2 = is_occupied(a, 1.0);
+
+    matter_occupancy_sensor_1.set_occupancy(occ_1);
+    matter_occupancy_sensor_2.set_occupancy(occ_2);
+    Serial-printf("Current ouccupancy state 1: %s\n", occ_1 ? "occupied" : "unoccupied");
+    Serial-printf("Current ouccupancy state 2: %s\n", occ_2 ? "occupied" : "unoccupied");
   }
-}
-
-void decommission_handler() {
-  if (digitalRead(BTN_BUILTIN) == LOW) {  //Push button pressed
-    // measures time pressed
-    int startTime = millis();
-    while (digitalRead(BTN_BUILTIN) == LOW) {
-      //delay(50);
-
-      int elapsedTime = (millis() - startTime) / 1000.0;
-
-      if (elapsedTime > 10) {
-        Serial.printf("Decommissioning!\n");
-        for (int i = 0; i < 10; i++) {
-          digitalWrite(LEDR, !(digitalRead(LEDR)));
-          delay(100);
-        };
-
-        if (!Matter.isDeviceCommissioned()) {
-          Serial.println("Decommission done!");
-          digitalWrite(LEDR, LOW);
-        } else {
-          Serial.println("Matter device is commissioned-> Starting Decommission process");
-          nvm3_eraseAll(nvm3_defaultHandle);  // Decomission command
-          digitalWrite(LED_BUILTIN, LOW);
-          Serial.println("Decommission done!");
-        }
-        break;
-      }
-    }
-  }
-}
-
-void get_pitch() {
-  sensors_event_t a, g, temp;
-  mpu_1.getEvent(&a, &g, &temp);
-  Ax=a.acceleration.x/9.81;
-  Ay=a.acceleration.y/9.81;
-  Az=a.acceleration.z/9.81;
-  pitch = atan2(Ay,sqrt(Az*Az+Ax*Ax))*360/(2*3.14);
-  Serial.print("Pitch:");
-  Serial.println(pitch);
 }
