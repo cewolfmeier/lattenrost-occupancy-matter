@@ -1,25 +1,41 @@
-#include <Adafruit_MPU6050.h>
 /**
 * Get the pitch value from a MPU6050.
 */
-float get_pitch(sensors_event_t a) {
-  float ax=a.acceleration.x/9.81;
-  float ay=a.acceleration.y/9.81;
-  float az=a.acceleration.z/9.81;
-  float pitch = atan2(ay,sqrt(az*az+ax*ax))*360/(2*3.14);
+float get_pitch(MPU6050 *mpu) {
+  int16_t ax, ay, az;
+  mpu->getAcceleration(&ax, &ay, &az);
+  float pitch = atan2((float)-ax, sqrt((float)ay*ay + (float)az*az)) * 180.0 / M_PI;
   return pitch; 
+}
+
+/**
+* Get the roll value from a MPU6050.
+*/
+float get_roll(MPU6050 *mpu) {
+  int16_t ax, ay, az;
+  mpu->getAcceleration(&ax, &ay, &az);
+  float roll = atan2((float)ay, (float)az) * 180.0 / M_PI;
+  return roll;
+}
+
+/**
+* Get the yaw rate from a MPU6050 in degrees/sec.
+* Note: True yaw angle requires a magnetometer. The MPU6050 only has a
+* gyroscope, so this returns the instantaneous rotation rate around Z.
+*/
+float get_yaw(MPU6050 *mpu) {
+  int16_t gx, gy, gz;
+  mpu->getRotation(&gx, &gy, &gz);
+  float yaw_rate = (float)gz / 131.0;  // 131 LSB/(deg/s) at default ±250 deg/s
+  return yaw_rate;
 }
 
 /**
 * Determine if a sensor registers an occupancy.
 */
-bool is_occupied(sensors_event_t a, float threshold) {
-  bool result = false;
-  float pitch = get_pitch(a);
-  if (pitch > threshold) {
-    result = true;
-  }
-  return result;
+bool is_occupied(MPU6050 *mpu, float threshold) {
+  float pitch = get_pitch(mpu);
+  return pitch > threshold ? true : false;
 }
 
 /**
