@@ -6,9 +6,9 @@
 // Set offsets. To measure them look at the instructions provided here: https://wired.chillibasket.com/2015/01/calibrating-mpu6050/
 float OFFSET_0[] = {-4289, 906, 1279, 41, -16, 17}; // ax, ay, az, gx, gy, gz
 float OFFSET_1[] = {1700, -1334, 1016, 54, -16, 9}; // ax, ay, az, gx, gy, gz
-// Set thresholds for occupancy detection. These are set for roll angle.
+// Set thresholds for occupancy detection. Use only positive values. These are set for roll angle.
 float THRESHOLD_0 = 178.1;
-float THRESHOLD_1 = -177.5;
+float THRESHOLD_1 = 177.3;
 bool USE_ROLL_0 = true;
 bool USE_ROLL_1 = true;
 // ---- CONFIG BLOCK END ----
@@ -108,8 +108,8 @@ void loop()
 {
   decommission_handler();
   static uint32_t last_action = 0;
-  // Wait 0.5 seconds
-  if ((last_action + 500) < millis()) {
+  // Wait 2 seconds
+  if ((last_action + 2000) < millis()) {
     last_action = millis();
 
     bool occ_0 = lattenrost_0.is_occupied(THRESHOLD_0, USE_ROLL_0);
