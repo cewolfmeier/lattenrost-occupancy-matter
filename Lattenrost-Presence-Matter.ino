@@ -2,14 +2,16 @@
 #include <MatterOccupancy.h>
 #include "Lattenrost.h"
 
+// ---- CONFIG BLOCK -- CHANGE AS NEEDED ----
 //Set offsets. To measure them look at the instructions provided here: https://wired.chillibasket.com/2015/01/calibrating-mpu6050/
 float OFFSET_0[] = {-4289, 906, 1279, 41, -16, 17}; // ax, ay, az, gx, gy, gz
 float OFFSET_1[] = {1700, -1334, 1016, 54, -16, 9}; // ax, ay, az, gx, gy, gz
 //Set thresholds for occupancy detection. These are set for pitch.
-float THRESHOLD_0 = 10.0;
-float THRESHOLD_1 = 10.0;
-bool USE_ROLL_0 = false;
-bool USE_ROLL_1 = false;
+float THRESHOLD_0 = 178.1;
+float THRESHOLD_1 = -177.5;
+bool USE_ROLL_0 = true;
+bool USE_ROLL_1 = true;
+// ---- CONFIG BLOCK END ----
 
 Adafruit_MPU6050 mpu_0;
 Adafruit_MPU6050 mpu_1;
