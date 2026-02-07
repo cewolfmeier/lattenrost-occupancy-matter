@@ -1,70 +1,75 @@
 #include <Matter.h>
 #include <MatterOccupancy.h>
-#include <Wire.h>
-#include <MPU6050.h>
+#include "Lattenrost.h"
 
-float OFFSET_0[] = {-4289, 906, 1279, 41, -16, 17};
-float OFFSET_1[] = {1700, -1334, 1016, 54, -16, 9};
+//Set offsets. To measure them look at the instructions provided here: https://wired.chillibasket.com/2015/01/calibrating-mpu6050/
+float OFFSET_0[] = {-4289, 906, 1279, 41, -16, 17}; // ax, ay, az, gx, gy, gz
+float OFFSET_1[] = {1700, -1334, 1016, 54, -16, 9}; // ax, ay, az, gx, gy, gz
+//Set thresholds for occupancy detection. These are set for pitch.
+float THRESHOLD_0 = 10.0;
+float THRESHOLD_1 = 10.0;
 
-MPU6050 lattenrost_0;
-MPU6050 lattenrost_1;
+Adafruit_MPU6050 mpu_0;
+Adafruit_MPU6050 mpu_1;
+
+Lattenrost lattenrost_0(mpu_0);
+Lattenrost lattenrost_1(mpu_1);
 
 MatterOccupancy matter_occupancy_sensor_1;
 MatterOccupancy matter_occupancy_sensor_2;
 
+void writeOffset(TwoWire& wire, uint8_t addr, uint8_t reg, int16_t value) {
+  wire.beginTransmission(addr);
+  wire.write(reg);
+  wire.write((uint8_t)(value >> 8));
+  wire.write((uint8_t)(value & 0xFF));
+  wire.endTransmission();
+}
+
+void applyOffsets(TwoWire& wire, uint8_t addr, float offsets[]) {
+  // Accel offsets: registers 0x06, 0x08, 0x0A
+  writeOffset(wire, addr, 0x06, (int16_t)offsets[0]);
+  writeOffset(wire, addr, 0x08, (int16_t)offsets[1]);
+  writeOffset(wire, addr, 0x0A, (int16_t)offsets[2]);
+  // Gyro offsets: registers 0x13, 0x15, 0x17
+  writeOffset(wire, addr, 0x13, (int16_t)offsets[3]);
+  writeOffset(wire, addr, 0x15, (int16_t)offsets[4]);
+  writeOffset(wire, addr, 0x17, (int16_t)offsets[5]);
+}
+
 void setup()
 {
-  // ---- serial setup---- 
+  // ---- serial setup----
   Serial.begin(115200);
 
-  // ---- onboard component setup---- 
+  // ---- onboard component setup----
   pinMode(BTN_BUILTIN, INPUT_PULLUP);
   pinMode(LEDR, OUTPUT);
   digitalWrite(LEDR, HIGH);
-  
-  // ---- first I2C interface and sensor setup---- 
-  Wire.begin();
-  lattenrost_0.initialize();
-  if (!lattenrost_0.testConnection()) {
-    Serial.println("Failed to find MPU6050 chip");
-    while (1) {
-      delay(10);
-    }
+
+  // ---- first I2C interface and sensor setup----
+  if (!mpu_0.begin(0x68, &Wire)) {
+    Serial.println("Failed to find first MPU6050 chip");
+    while (1) { delay(10); }
   }
   Serial.println("First MPU6050 Found!");
-  /* Use the code below to change accel/gyro offset values. Use MPU6050_Zero to obtain the recommended offsets */ 
-  Serial.println("Updating internal sensor offsets...\n");
-  lattenrost_0.setXAccelOffset(OFFSET_0[0]); //Set your accelerometer offset for axis X
-  lattenrost_0.setYAccelOffset(OFFSET_0[1]); //Set your accelerometer offset for axis Y
-  lattenrost_0.setZAccelOffset(OFFSET_0[2]); //Set your accelerometer offset for axis Z
-  lattenrost_0.setXGyroOffset(OFFSET_0[3]);  //Set your gyro offset for axis X
-  lattenrost_0.setYGyroOffset(OFFSET_0[4]);  //Set your gyro offset for axis Y
-  lattenrost_0.setZGyroOffset(OFFSET_0[5]);  //Set your gyro offset for axis Z
+  applyOffsets(Wire, 0x68, OFFSET_0);
 
-  // ---- second I2C interface and sensor setup---- 
-  
-  Wire1.begin();
-  lattenrost_1.initialize();
-  if (!lattenrost_1.testConnection()) {
-    Serial.println("Failed to find MPU6050 chip");
-    while (1) {
-      delay(10);
-    }
+  // ---- second I2C interface and sensor setup----
+  if (!mpu_1.begin(0x68, &Wire1)) {
+    Serial.println("Failed to find second MPU6050 chip");
+    while (1) { delay(10); }
   }
   Serial.println("Second MPU6050 Found!");
-  Serial.println("Updating internal sensor offsets...\n");
-  lattenrost_1.setXAccelOffset(OFFSET_1[0]); //Set your accelerometer offset for axis X
-  lattenrost_1.setYAccelOffset(OFFSET_1[1]); //Set your accelerometer offset for axis Y
-  lattenrost_1.setZAccelOffset(OFFSET_1[2]); //Set your accelerometer offset for axis Z
-  lattenrost_1.setXGyroOffset(OFFSET_1[3]);  //Set your gyro offset for axis X
-  lattenrost_1.setYGyroOffset(OFFSET_1[4]);  //Set your gyro offset for axis Y
-  lattenrost_1.setZGyroOffset(OFFSET_1[5]);  //Set your gyro offset for axis Z
+  applyOffsets(Wire1, 0x68, OFFSET_1);
 
-  // ---- Matter setup---- 
-  /*
+  // ---- Matter setup----
+  
   Matter.begin();
   matter_occupancy_sensor_1.begin();
+  matter_occupancy_sensor_1.set_device_name("Lattenrost Sensor 1");
   matter_occupancy_sensor_2.begin();
+  matter_occupancy_sensor_2.set_device_name("Lattenrost Sensor 2");
 
   Serial.println("Matter occupancy sensor");
 
@@ -92,34 +97,60 @@ void setup()
   }
 
   Serial.println("Matter device is now online");
-  */
+  
 }
 
 void loop()
 {
-  //decommission_handler();
+  decommission_handler();
   static uint32_t last_action = 0;
   // Wait 1 second
   if ((last_action + 1000) < millis()) {
     last_action = millis();
 
-    Serial.print("Sensor 0: ");
-    Serial.println(get_pitch(&lattenrost_0));
-    Serial.println(get_roll(&lattenrost_0));
-    Serial.println(get_yaw(&lattenrost_0));
-    Serial.print("Sensor 1: ");
-    Serial.println(get_pitch(&lattenrost_1));
-    Serial.println(get_roll(&lattenrost_1));
-    Serial.println(get_yaw(&lattenrost_1));
-    Serial.println();
-    //bool occ_0 = is_occupied(&lattenrost_1, 1.0);
+    bool occ_0 = lattenrost_0.is_occupied(THRESHOLD_0);
+    bool occ_1 = lattenrost_1.is_occupied(THRESHOLD_1);
 
-    //bool occ_1 = is_occupied(&lattenrost_1, 1.0);
-    /*
     matter_occupancy_sensor_1.set_occupancy(occ_0);
     matter_occupancy_sensor_2.set_occupancy(occ_1);
-    Serial-printf("Current ouccupancy state 1: %s\n", occ_0 ? "occupied" : "unoccupied");
-    Serial-printf("Current ouccupancy state 2: %s\n", occ_1 ? "occupied" : "unoccupied");
-    */
+
+    Serial.printf("Current occupancy state 1: %s\n", occ_0 ? "occupied" : "unoccupied");
+    Serial.printf("Current occupancy state 2: %s\n", occ_1 ? "occupied" : "unoccupied");
+  }
+}
+
+/**
+* Decommission the device from the network.
+*
+* The button has to be pressed for at least 10 seconds to initiate the procedure.
+*/
+void decommission_handler() {
+  if (digitalRead(BTN_BUILTIN) == LOW) {  //Push button pressed
+    // measures time pressed
+    int startTime = millis();
+    while (digitalRead(BTN_BUILTIN) == LOW) {
+      //delay(50);
+
+      int elapsedTime = (millis() - startTime) / 1000.0;
+
+      if (elapsedTime > 10) {
+        Serial.printf("Decommissioning!\n");
+        for (int i = 0; i < 10; i++) {
+          digitalWrite(LEDR, !(digitalRead(LEDR)));
+          delay(100);
+        };
+
+        if (!Matter.isDeviceCommissioned()) {
+          Serial.println("Decommission done!");
+          digitalWrite(LEDR, LOW);
+        } else {
+          Serial.println("Matter device is commissioned-> Starting Decommission process");
+          nvm3_eraseAll(nvm3_defaultHandle);  // Decomission command
+          digitalWrite(LED_BUILTIN, LOW);
+          Serial.println("Decommission done!");
+        }
+        break;
+      }
+    }
   }
 }
