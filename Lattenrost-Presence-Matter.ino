@@ -3,10 +3,10 @@
 #include "Lattenrost.h"
 
 // ---- CONFIG BLOCK -- CHANGE AS NEEDED ----
-//Set offsets. To measure them look at the instructions provided here: https://wired.chillibasket.com/2015/01/calibrating-mpu6050/
+// Set offsets. To measure them look at the instructions provided here: https://wired.chillibasket.com/2015/01/calibrating-mpu6050/
 float OFFSET_0[] = {-4289, 906, 1279, 41, -16, 17}; // ax, ay, az, gx, gy, gz
 float OFFSET_1[] = {1700, -1334, 1016, 54, -16, 9}; // ax, ay, az, gx, gy, gz
-//Set thresholds for occupancy detection. These are set for roll angle.
+// Set thresholds for occupancy detection. These are set for roll angle.
 float THRESHOLD_0 = 178.1;
 float THRESHOLD_1 = -177.5;
 bool USE_ROLL_0 = true;
