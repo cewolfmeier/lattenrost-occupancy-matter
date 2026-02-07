@@ -1,6 +1,9 @@
-# Lattenrost Presence Detection With Matter
-This project is based on this [idea](https://community.simon42.com/t/meine-wohnung-weiss-wann-ich-im-bett-bin/10240).
-It uses two MPU6050 accelerometers connected to an Arduino Nano Matter and detects bed occupancy by measuring angle changes in the slats and exposes occupancy state via the Matter smart home protocol over Thread.
+# Lattenrost Occupancy Detection With Matter
+> [!WARNING] 
+> This project is at an early stage. It works but there is much room for improvement. Use with caution.
+
+It is based on this [idea](https://community.simon42.com/t/meine-wohnung-weiss-wann-ich-im-bett-bin/10240).
+One MPU6050 accelerometer per bed connected to an Arduino Nano Matter detects bed occupancy by measuring angle changes in the slats. The occupancy state is exposed via the Matter smart home protocol over Thread.
 
 ## Components Used
 - Arduino Nano Matter
