@@ -32,9 +32,13 @@ public:
 
   bool is_occupied(float threshold, bool use_roll=false) {
     if (use_roll) {
-      return threshold > 0 ? get_roll() > threshold : get_roll() < threshold;
+      float roll = get_roll();
+      roll = roll < 0 ? roll*-1 : roll;
+      return roll > threshold;
     }
-    return threshold > 0 ? get_pitch() > threshold : get_pitch() < threshold;
+    float pitch = get_pitch();
+    pitch = pitch < 0 ? pitch*-1 : pitch;
+    return pitch > threshold;
   }
 };
 
