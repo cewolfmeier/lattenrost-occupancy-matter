@@ -11,6 +11,7 @@ One MPU6050 accelerometer per bed connected to an Arduino Nano Matter detects be
 
 ## Using The Right Data
 ![GY-87](/docs/GY_87_2.png)
+Have a look at the serial output for configuration.
 
 ## Sources
 - https://community.simon42.com/t/meine-wohnung-weiss-wann-ich-im-bett-bin/10240
