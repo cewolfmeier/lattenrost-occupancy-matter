@@ -8,6 +8,8 @@ float OFFSET_1[] = {1700, -1334, 1016, 54, -16, 9}; // ax, ay, az, gx, gy, gz
 //Set thresholds for occupancy detection. These are set for pitch.
 float THRESHOLD_0 = 10.0;
 float THRESHOLD_1 = 10.0;
+bool USE_ROLL_0 = false;
+bool USE_ROLL_1 = false;
 
 Adafruit_MPU6050 mpu_0;
 Adafruit_MPU6050 mpu_1;
@@ -15,8 +17,8 @@ Adafruit_MPU6050 mpu_1;
 Lattenrost lattenrost_0(mpu_0);
 Lattenrost lattenrost_1(mpu_1);
 
-MatterOccupancy matter_occupancy_sensor_1;
-MatterOccupancy matter_occupancy_sensor_2;
+MatterOccupancy matter_occupancy_0;
+MatterOccupancy matter_occupancy_1;
 
 void writeOffset(TwoWire& wire, uint8_t addr, uint8_t reg, int16_t value) {
   wire.beginTransmission(addr);
@@ -64,14 +66,14 @@ void setup()
   applyOffsets(Wire1, 0x68, OFFSET_1);
 
   // ---- Matter setup----
-  
-  Matter.begin();
-  matter_occupancy_sensor_1.begin();
-  matter_occupancy_sensor_1.set_device_name("Lattenrost Sensor 1");
-  matter_occupancy_sensor_2.begin();
-  matter_occupancy_sensor_2.set_device_name("Lattenrost Sensor 2");
 
-  Serial.println("Matter occupancy sensor");
+  Matter.begin();
+  matter_occupancy_0.begin();
+  matter_occupancy_0.set_device_name("Lattenrost Sensor 1");
+  matter_occupancy_1.begin();
+  matter_occupancy_1.set_device_name("Lattenrost Sensor 2");
+
+  Serial.println("Matter endpoints initialized");
 
   if (!Matter.isDeviceCommissioned()) {
     Serial.println("Matter device is not commissioned");
@@ -92,7 +94,7 @@ void setup()
   Serial.println("Connected to Thread network");
 
   Serial.println("Waiting for Matter device discovery...");
-  while (!matter_occupancy_sensor_1.is_online() && !matter_occupancy_sensor_2.is_online()) {
+  while (!matter_occupancy_0.is_online() && !matter_occupancy_1.is_online()) {
     delay(200);
   }
 
@@ -104,18 +106,22 @@ void loop()
 {
   decommission_handler();
   static uint32_t last_action = 0;
-  // Wait 1 second
-  if ((last_action + 1000) < millis()) {
+  // Wait 0.5 seconds
+  if ((last_action + 500) < millis()) {
     last_action = millis();
 
-    bool occ_0 = lattenrost_0.is_occupied(THRESHOLD_0);
-    bool occ_1 = lattenrost_1.is_occupied(THRESHOLD_1);
+    bool occ_0 = lattenrost_0.is_occupied(THRESHOLD_0, USE_ROLL_0);
+    bool occ_1 = lattenrost_1.is_occupied(THRESHOLD_1, USE_ROLL_1);
 
-    matter_occupancy_sensor_1.set_occupancy(occ_0);
-    matter_occupancy_sensor_2.set_occupancy(occ_1);
+    matter_occupancy_0.set_occupancy(occ_0);
+    matter_occupancy_1.set_occupancy(occ_1);
 
-    Serial.printf("Current occupancy state 1: %s\n", occ_0 ? "occupied" : "unoccupied");
-    Serial.printf("Current occupancy state 2: %s\n", occ_1 ? "occupied" : "unoccupied");
+    Serial.printf("Sensor 0 - pitch: %.1f, roll: %.1f, threshold: %.1f, mode: %s, %s\n",
+                  lattenrost_0.get_pitch(), lattenrost_0.get_roll(), THRESHOLD_0, USE_ROLL_0 ? "roll" : "pitch",
+                  occ_0 ? "occupied" : "unoccupied");
+    Serial.printf("Sensor 1 - pitch: %.1f, roll: %.1f, threshold: %.1f, mode: %s, %s\n",
+                  lattenrost_1.get_pitch(), lattenrost_1.get_roll(), THRESHOLD_1, USE_ROLL_1 ? "roll" : "pitch",
+                  occ_1 ? "occupied" : "unoccupied");
   }
 }
 

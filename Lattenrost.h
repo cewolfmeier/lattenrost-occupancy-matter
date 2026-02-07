@@ -30,10 +30,10 @@ public:
     return g.gyro.z * 180.0 / M_PI;  // rad/s -> deg/s
   }
 
-  bool is_occupied(float threshold) {
-    Serial.println(get_pitch());
-    Serial.println(get_roll());
-    Serial.println();
+  bool is_occupied(float threshold, bool use_roll=false) {
+    if (use_roll) {
+      return get_roll() > threshold;
+    }
     return get_pitch() > threshold;
   }
 };
